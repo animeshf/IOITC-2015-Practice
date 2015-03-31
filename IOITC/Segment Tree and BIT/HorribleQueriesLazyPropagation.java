@@ -2,18 +2,18 @@ import java.util.*;
 import java.io.*;
 class HorribleQueriesLazyPropagation
 { 
-    static long segTree[]=new long[500001];
-    static long lazyTree[]=new long[500001];
+    static long segTree[]=new long[400004];
+    static long lazyTree[]=new long[400004];
     public static void main(String[]args)
     {
         InputReader1 sc = new InputReader1(System.in);
         int T = sc.nextInt();
+        StringBuilder ans = new StringBuilder();
         while(T-->0)
-        {
+        { 
             int N = sc.nextInt(), Q =sc.nextInt();
             Arrays.fill(segTree,0);
             Arrays.fill(lazyTree,0);
-            StringBuilder ans = new StringBuilder();
             while(Q-->0)
             {
                 int type = sc.nextInt();
@@ -21,7 +21,7 @@ class HorribleQueriesLazyPropagation
                 {
                     int l = sc.nextInt();
                     int r = sc.nextInt();
-                    int val= sc.nextInt();
+                    long val= sc.nextLong();
                     update(0,N-1,1,l-1,r-1,val);
                 }
                 else
@@ -32,51 +32,64 @@ class HorribleQueriesLazyPropagation
                     ans.append(temp).append("\n");
                 }
             }
-            System.out.println(ans);
         }
+        System.out.println(ans);
     }
-    
-    static long update(int l,int r,int node,int ql,int qr,int val)
-    {
-        if(l>qr||r<ql)
+
+    static void update(int l,int r,int node,int ql,int qr,long val)
+    { 
+        if(lazyTree[node]!=0) // Hence the node needs to be updated
         {
-            return 0;
+            segTree[node]+=(r-l+1)*lazyTree[node]; // Update it
+            if(l!=r) // Transfer "Needs to Be Updated" status to the children (if any)
+            {
+                lazyTree[node*2+1]+=lazyTree[node];
+                lazyTree[node*2+2]+=lazyTree[node];
+            }
+            lazyTree[node]=0;     // Reset "Needs to be Updated status" to zero
         }
-        if(l>=ql&&r<=qr)
+        if(l>qr||r<ql) // Outside Range
         {
-            lazyTree[node]+=(long)val;
-            long range = r-l+1;
-            return (range * (long) val);
+            return;
+        }
+        if(l>=ql && r<=qr) // Entirely within the range
+        {
+            segTree[node]+=(r-l+1)*val; // Update the range value by adding (range length) * increm
+            if(l!=r) // If not leaf node
+            {
+                lazyTree[node*2+1] += val; // Mark Children to be Updated by same increm
+                lazyTree[node*2+2] += val; // Mark Children to be Updated by same increm
+            }
+            return; // Important
         }
         int mid = (l+r)>>1;
-        long temp = update(l,mid,node*2+1,ql,qr,val)+update(mid+1,r,node*2+2,ql,qr,val);
-        segTree[node]+=temp;
-        return temp;
+        update(l,mid,node*2+1,ql,qr,val);
+        update(mid+1,r,node*2+2,ql,qr,val);
+        segTree[node]=segTree[node*2+1]+segTree[node*2+2]; // Normal
     }
 
     static long sum(int l,int r,int node,int ql,int qr)
     {
-        if(l>qr||r<ql)
+        if(lazyTree[node]!=0) // Needs to be Updated
+        { 
+            segTree[node]+=(r-l+1)*lazyTree[node]; // Update value of node by adding increment
+            if(l!=r) // If not a leaf
+            { 
+                lazyTree[node*2+1]+=lazyTree[node];// Transfer "Needs to Be Updated" status to the children 
+                lazyTree[node*2+2]+=lazyTree[node];
+            }
+            lazyTree[node]=0;;//Reset 
+        }
+        if(l>qr||r<ql) // If outside range entirely!
         {
             return 0;
         }
-        if(l>=ql&&r<=qr)
+        if(l>=ql&&r<=qr) // If entirely within range , return value
         {
-            long range = r-l+1;
-            return segTree[node] + range * lazyTree[node];
+            return segTree[node];
         }
-        children(l,r,node);
         int mid = (l+r)>>1;
         return sum(l,mid,node*2+1,ql,qr) + sum(mid+1,r,node*2+2,ql,qr);
-    }
-
-    static void children(int l,int r,int node)
-    {
-        lazyTree[node*2+1]+=lazyTree[node];
-        lazyTree[node*2+2]+=lazyTree[node];
-        long range = r-l+1;
-        segTree[node]+= range * lazyTree[node];
-        lazyTree[node]=0;
     }
 }
 class InputReader1 
