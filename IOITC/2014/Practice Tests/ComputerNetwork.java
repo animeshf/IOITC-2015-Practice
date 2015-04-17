@@ -1,12 +1,13 @@
+
 import java.util.*;
 import java.io.*;
 class ComputerNetwork
 {
     static ArrayList<ArrayList<Integer>> adjList = new ArrayList<ArrayList<Integer>>();
     static pair DP[][]=new pair[10001][2];
-    static int D[]=new int[10001];
+    static int D[]=new int[10001]; // Discovery Time
     static int VIS[]=new int[10001];
-    static pairer ANS = new pairer(0,new pair(0,0));
+    static tuple ANS = new tuple(0,new pair(0,0)); //(Longest Path , End Points of LP)
     static int N,M;
     public static void main(String[]args)
     {
@@ -26,61 +27,81 @@ class ComputerNetwork
             adjList.get(to).add(from);
         }
         dfs(0,0,0);
-        System.out.println((1-ANS.second.len)+" "+(1-ANS.second.node));
+        System.out.println((1-ANS.second.first)+" "+(1-ANS.second.second)); // we had stored them as -x
     }
 
     static int dfs(int node , int parent , int depth)
     {
         VIS[node]=1;
-        DP[node][0] = DP[node][1] = new pair(0,-node);
-        D[node] = depth;
-        int ret = depth;
-        int rem = 1;
+        DP[node][0] = DP[node][1] = new pair(0,-node); // (-NODE) for easier lexicographical check
+        // DP[X][0] = Maximum Weighted Path in the subtree rooted at X where X IS ONE END POINT OF THE PATH
+        // DP[X][1] = Second  Max '     '     '    '      '     '    '   '   '   '  '  '  '   '    '   '   '
+        D[node] = depth; // Depth (disc time)
+        int ret = depth; // Lowest Back Edge
+        int rem = 1;  // to solve multiple edges problem
+        // Usually edges from node --> parent do not qualify as back edges
+        // If there are multiple edges from node to parent ,one of them can be considered as back edge.
         for(int i=0;i<adjList.get(node).size();i++)
         {
-            int v = adjList.get(node).get(i);
-            if(VIS[v]==0)
+            int v = adjList.get(node).get(i); // Adj List 
+            if(VIS[v]==0) // If not visited(must keep visited array as it is a graph)
             {
-                int db = dfs(v,node,depth+1);
+                int db = dfs(v,node,depth+1); 
                 pair tr = DP[v][0];
-                ret = Math.min(ret,db);
-                if(db>depth)
-                    tr.len++;
-                if((tr.len==DP[node][0].len && tr.node>=DP[node][0].node) || tr.len>DP[node][0].len)
+                ret = Math.min(ret,db); // Lowest back edge from that child
+                if(db>depth)   // Bridge!
+                    tr.first++;  // Increase weight of path as bridge found
+                if(pair_greater(tr,DP[node][0]))
                 {
                     DP[node][1]=DP[node][0];
                     DP[node][0]=tr;
                 }
-                else if((tr.len==DP[node][1].len && tr.node>=DP[node][1].node) || tr.len>DP[node][1].len)
+                else if(pair_greater(tr,DP[node][1]))
                     DP[node][1] = tr;
             }
             else
             {
-                if(v==parent && rem==1) rem--;
-                else
-                    ret = Math.min(ret,D[v]);
+                if(v==parent && rem==1) rem--; // initial check , if multiple edges then it qualifies as back edge
+                else 
+                    ret = Math.min(ret,D[v]); //Lowest Back Edge Value
             }
         }
-        int dd = DP[node][0].len+DP[node][1].len;
-        pair v1 = new pair(DP[node][0].node , DP[node][1].node);
-        if(v1.len < v1.node)
-        {
-            int t = v1.len;
-            v1.len=v1.node;
-            v1.node=t;
+        int dd = DP[node][0].first + DP[node][1].first ; //Sum of Second max path and Max Path
+        pair v1 = new pair(DP[node][0].second , DP[node][1].second); // End Points of the path
+        if(v1.first < v1.second) // Swap for lexico purpose
+        { 
+            int t = v1.first;
+            v1.first=v1.second;
+            v1.second=t;
         }
-        pairer cans = new pairer(dd,v1);
-        if((cans.first>ANS.first)||(cans.first==ANS.first && cans.second.len>ANS.second.len)||
-        (cans.first==ANS.first && cans.second.len==ANS.second.len && cans.second.node>ANS.second.node))
+        tuple cans = new tuple(dd,v1);
+        if(tuple_greater(cans,ANS))
             ANS=cans;
-        return ret;    
+        return ret;     // lowest back edge
+    }
+
+    static boolean pair_greater(pair p , pair q)
+    {
+        if((p.first==q.first && p.second>=q.second)||p.first>q.first)
+            return true;
+        else
+            return false;
+    }
+
+    static boolean tuple_greater(tuple p , tuple q)
+    {
+        if((p.first>q.first)||(p.first==q.first && p.second.first>q.second.first)||
+        (p.first==q.first && p.second.first==q.second.first && p.second.second>q.second.second))   
+            return true;
+        else
+            return false;  
     }
 }
-class pairer
+class tuple
 {
-    int first;
+    int first; 
     pair second;
-    public pairer(int a , pair b)
+    public tuple(int a , pair b)
     {
         first = a;
         second = b;
@@ -88,11 +109,11 @@ class pairer
 }
 class pair
 {
-    int len,node;
-    public pair(int len , int node)
+    int first,second;
+    public pair(int first , int second)
     {
-        this.len=len;
-        this.node=node;
+        this.first = first;
+        this.second= second;
     }
 }
 class InputReader1 
